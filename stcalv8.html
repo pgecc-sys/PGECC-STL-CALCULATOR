@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>PGECC Short-Term Loan Calculator & Schedule</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{
+    --brand-green:#2e8b2e;
+    --btn-blue:#1877f2;
+    --btn-green:#42b72a;
+    --card-bg:#ffffff;
+  }
+
+  /* Page layout (on-screen) */
+  body{
+    font-family: Arial, Helvetica, sans-serif;
+    background:#e9ebee;
+    margin:0;
+    padding:24px;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+  }
+  .app {
+    width:680px;
+    background:var(--card-bg);
+    border-radius:10px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.12);
+    padding:18px;
+  }
+
+  /* Header / FB-like top */
+  .top {
+    display:flex;
+    gap:12px;
+    align-items:center;
+    margin-bottom:14px;
+  }
+  .logo-block {
+    flex:0 0 140px;
+  }
+  .logo-block img {
+    width:100%;
+    max-height:70px;
+    object-fit:contain;
+  }
+  .title {
+    flex:1;
+    color:var(--brand-green);
+    font-size:28px;
+    font-weight:700;
+    line-height:1;
+  }
+  .subtitle {
+    color:#555;
+    margin-top:4px;
+    font-size:13px;
+  }
+
+  /* Form */
+  .form {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-top:8px;
+    align-items:end;
+  }
+  .form .field {
+    display:flex;
+    flex-direction:column;
+  }
+  label { font-size:13px; color:#333; margin-bottom:6px; font-weight:600;}
+  input[type=number]{
+    padding:10px 12px;
+    border-radius:6px;
+    border:1px solid #cfcfcf;
+    font-size:14px;
+  }
+  .full { grid-column:1 / -1; display:flex; gap:8px; }
+  .note { font-size:13px; color:#666; margin-top:6px; }
+
+  /* Buttons */
+  .btn {
+    padding:10px 12px;
+    border-radius:6px;
+    border:0;
+    cursor:pointer;
+    font-weight:700;
+    font-size:14px;
+  }
+  .btn-calc { background:var(--btn-blue); color:white; flex:1;}
+  .btn-print { background:var(--btn-green); color:white; flex:1;}
+
+  /* Result area (on-screen preview) */
+  .preview {
+    margin-top:16px;
+    background:#f5f7fa;
+    padding:12px;
+    border-radius:8px;
+  }
+  .error { color:#b00020; font-weight:700; margin-top:6px; }
+
+  /* Schedule table (display preview & used for print) */
+  .schedule {
+    margin-top:14px;
+    width:100%;
+    overflow:auto;
+  }
+  table {
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+  table thead th {
+    border-bottom:2px solid #333;
+    padding:6px 8px;
+    text-align:left;
+    background:#fff;
+    font-weight:700;
+  }
+  table tbody td {
+    padding:6px 8px;
+    border-bottom:1px dashed #cfcfcf;
+    text-align:left;
+  }
+  table tbody td.center { text-align:center; }
+  table tfoot td {
+    padding:8px;
+    font-weight:800;
+    border-top:2px solid #333;
+  }
+
+  /* Print-specific layout */
+  @media print {
+    /* page size: half short bond paper in portrait -> 8.5in x 5.5in */
+    @page { size: 8.5in 5.5in portrait; margin:0.25in; }
+    body { margin:0; padding:0; background:white; }
+    /* hide everything except the printable area */
+    .app { box-shadow:none; width:100%; margin:0; padding:0; border-radius:0; }
+    .calculator-ui { display:none !important; } /* hide calculator */
+    .print-area { display:block !important; }
+    button { display:none !important; }
+    /* ensure table uses full printable width */
+    .print-wrapper { padding:6px; }
+    table, thead th, tbody td, tfoot td { font-size:12px; }
+  }
+
+  /* On-screen hide print-only container until printing (but show preview) */
+  .print-area { display:none; }
+
+  /* Small helpers */
+  .muted { color:#666; font-size:13px; }
+  .right { text-align:right; }
+  .center { text-align:center; }
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- CALCULATOR UI (hidden during print) -->
+    <div class="calculator-ui">
+      <div class="top">
+        <div class="logo-block">
+          <!-- Embedded Base64 header image (your provided header). -->
+          <img alt="PGECC Header" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAApQAAABCCAYAAADybmQnAAAABHNCSVQICAgIfAhkiAAAB2VJREFUeJzt3V1y2zgQBuDrC+0k0+w0+4k+2dTDZsktPOcgfWlBwhwvnAK6eqs1gWp1J8JgBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADgD/jyrQjghQQe9N34g6v2PU+8QkcHjpzxyo6nnfse83Un+OdDSeAgXq4/Xe9bDvm14jE+ECv3c2knf7uXSOX+mJ+yzl/75mGv37vB/5/YuR1pvIM6tOEifbRfiWUJ7vwUQynM8o1Z4tXvBrx2mcZoX8XkVvlzx7qv2jaq3VRyC8pUOB3U7n89hOwv5p9mH2YccuLBjsVtEkuDFR+hjVgvxX0VntQHTbOYhmEcRuhsVhtYDlK9cA8T60HvCGLwnL8q1AFxq9zsmL+bwSDkDvhpybPMPFfJ5K+3mI7b7cSWM5Kk+psNFD3iErL8WzNA6t1EJ/yPvNfwXW+wlgU7B4g7T9W0Hv1wq+h7lRY95rPoVb8+gqe/b3WQW9Zk6bHZZt4aEMqjp/ep3vdV7rr/RPmu9WjTnDg9IMmPUClWzv9a2V+OV6f70LO46bxr81sw0P/bsVRrY50aUIeHi2hdCWfQbV0KkeVvbrBvmlF11A9tA3wH0y/iB+y4A9dc6Z5umXGfGhfksKOPQmFUBLMHpm2dv9i/WC02E9qa3rB1gr2sEwTfYDCWDW8hR3VtYMtbiwnoPKY+MN9um5rKMIpbTykUulXQf4ssqUbHeeaHuf9jPgeUk7jeKn+jSmPpMvTwGz7EprqM4LKstJzmsRo5z6UT4pxfU9hPZ4tL3WPp/f9SlDkuOrC5wXbq7z6R3pruLd0Flu/Bd8F8V8m8pMH/bUK/1nOHtYzuLuuL/ifRLXf0rXcP3FGHZy9aC2Aj5u+MQJq+fQ7rfwvdhjDGUg9inW+2cOxU0T6Rk4h6bC/3V3Ce3fbT6W//04J+sNrzRfxxNjfJYVX5qlftm6bM0mctjyYGHb9KPKkLneV55Td5frH+mmR/NMPqfdx+wTr+yD3Ytiz1FuOwfHrXsYprWcoyceLrtuTp2kYddfkpkjKs/6SLOUmvvdcP7mvVZP22a/q2N7yOefZzMeJYNqLzSHfV5Z+mcRR60H0bPSjKd9LPL6iVuW3I1ijFz+Tj6tLeW/3nTXWOZyapypurT+ef3VsN+hNUrc8bL1NX/zZnKquTb75cTeFNHVevc+4U2rzXeNHbm1TsTqcz4YOXfXN8h9hyP2jrb33qMWRrOxqXOmmPOiWcVJnsfVXkOWez5Xftd/Pr32Ye+wHV1a9xaX9HOQH2pPnV12WyrbJc1z8ylrkR5VrF/nTbfSn1guW+MZXOl78zjnfrzxf6Z3sZnHyli2pze2B6M4Zn3Wum7x3rrdUSr9qZ92XdEjX8IrtG74/7VfB8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPxe/wBTQydK0EX22gAAAABJRU5ErkJggg==" />
+        </div>
+        <div class="title-area" style="flex:1">
+          <div class="title">PGECC</div>
+          <div class="subtitle">Philsaga Group Employees Credit Cooperative</div>
+        </div>
+      </div>
+
+      <div class="form">
+        <div class="field">
+          <label>Share Capital (₱)</label>
+          <input id="shareCapital" type="number" placeholder="Enter share capital (e.g. 12000)" min="0" />
+        </div>
+
+        <div class="field">
+          <label>Loan Amount (₱)</label>
+          <input id="loanAmount" type="number" placeholder="Desired loan amount" min="0" />
+          <div id="loanError" class="error" style="display:none;"></div>
+        </div>
+
+        <div class="field">
+          <label>Months to Pay (1–6)</label>
+          <input id="months" type="number" placeholder="Months (max 6)" min="1" max="6" />
+        </div>
+
+        <div class="field">
+          <label>&nbsp;</label>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-calc" onclick="onCalculate()">Calculate</button>
+            <button class="btn btn-print" onclick="onPrint()">Print</button>
+          </div>
+        </div>
+
+        <div class="field full">
+          <div class="note muted">Service Fee: ₱20 | Paid-up share capital: 5% of principal (deducted) | Interest: 2% per month on net proceeds</div>
+        </div>
+      </div>
+
+      <div id="summary" class="preview" style="display:none;">
+        <div id="summaryText"></div>
+      </div>
+    </div>
+
+    <!-- PRINT AREA: header + schedule (this section will be displayed when printing) -->
+    <div class="print-area" id="printArea">
+      <div class="print-wrapper" style="padding:10px;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+          <div style="width:130px;">
+            <img alt="Header" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAApQAAABCCAYAAADybmQnAAAABHNCSVQICAgIfAhkiAAAB2VJREFUeJzt3V1y2zgQBuDrC+0k0+w0+4k+2dTDZsktPOcgfWlBwhwvnAK6eqs1gWp1J8JgBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADgD/jyrQjghQQe9N34g6v2PU+8QkcHjpzxyo6nnfse83Un+OdDSeAgXq4/Xe9bDvm14jE+ECv3c2knf7uXSOX+mJ+yzl/75mGv37vB/5/YuR1pvIM6tOEifbRfiWUJ7vwUQynM8o1Z4tXvBrx2mcZoX8XkVvlzx7qv2jaq3VRyC8pUOB3U7n89hOwv5p9mH2YccuLBjsVtEkuDFR+hjVgvxX0VntQHTbOYhmEcRuhsVhtYDlK9cA8T60HvCGLwnL8q1AFxq9zsmL+bwSDkDvhpybPMPFfJ5K+3mI7b7cSWM5Kk+psNFD3iErL8WzNA6t1EJ/yPvNfwXW+wlgU7B4g7T9W0Hv1wq+h7lRY95rPoVb8+gqe/b3WQW9Zk6bHZZt4aEMqjp/ep3vdV7rr/RPmu9WjTnDg9IMmPUClWzv9a2V+OV6f70LO46bxr81sw0P/bsVRrY50aUIeHi2hdCWfQbV0KkeVvbrBvmlF11A9tA3wH0y/iB+y4A9dc6Z5umXGfGhfksKOPQmFUBLMHpm2dv9i/WC02E9qa3rB1gr2sEwTfYDCWDW8hR3VtYMtbiwnoPKY+MN9um5rKMIpbTykUulXQf4ssqUbHeeaHuf9jPgeUk7jeKn+jSmPpMvTwGz7EprqM4LKstJzmsRo5z6UT4pxfU9hPZ4tL3WPp/f9SlDkuOrC5wXbq7z6R3pruLd0Flu/Bd8F8V8m8pMH/bUK/1nOHtYzuLuuL/ifRLXf0rXcP3FGHZy9aC2Aj5u+MQJq+fQ7rfwvdhjDGUg9inW+2cOxU0T6Rk4h6bC/3V3Ce3fbT6W//04J+sNrzRfxxNjfJYVX5qlftm6bM0mctjyYGHb9KPKkLneV55Td5frH+mmR/NMPqfdx+wTr+yD3Ytiz1FuOwfHrXsYprWcoyceLrtuTp2kYddfkpkjKs/6SLOUmvvdcP7mvVZP22a/q2N7yOefZzMeJYNqLzSHfV5Z+mcRR60H0bPSjKd9LPL6iVuW3I1ijFz+Tj6tLeW/3nTXWOZyapypurT+ef3VsN+hNUrc8bL1NX/zZnKquTb75cTeFNHVevc+4U2rzXeNHbm1TsTqcz4YOXfXN8h9hyP2jrb33qMWRrOxqXOmmPOiWcVJnsfVXkOWez5Xftd/Pr32Ye+wHV1a9xaX9HOQH2pPnV12WyrbJc1z8ylrkR5VrF/nTbfSn1guW+MZXOl78zjnfrzxf6Z3sZnHyli2pze2B6M4Zn3Wum7x3rrdUSr9qZ92XdEjX8IrtG74/7VfB8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPxe/wBTQydK0EX22gAAAABJRU5ErkJggg==" style="max-height:64px; width:100%; object-fit:contain;" />
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:800; font-size:16px;">Philsaga Group Employees Credit Cooperative</div>
+            <div style="font-size:12px; color:#333;">Short-term Loan Payment Schedule</div>
+          </div>
+        </div>
+
+        <!-- schedule table -->
+        <div id="scheduleContainer" class="schedule">
+          <!-- dynamic content will be injected here -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+/* --------------------
+   Helper utilities
+   -------------------- */
+function fmt(n){
+  // Format as PHP currency with 2 decimals and thousands separator
+  return Number(n).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function currency(n){ return '₱' + fmt(n); }
+
+/* Loanable tiers */
+function getMaxLoanable(shareCapital){
+  shareCapital = Number(shareCapital) || 0;
+  if (shareCapital < 1000) return 2000;
+  if (shareCapital < 5000) return 4000;
+  if (shareCapital < 13000) return 10000;
+  if (shareCapital < 21000) return 15000;
+  if (shareCapital < 33000) return 20000;
+  if (shareCapital < 57000) return 25000;
+  if (shareCapital < 97000) return 30000;
+  return 35000;
+}
+
+/* Determine first payment date according to cutoff 10th & 25th */
+function computeFirstPaymentDate(today){
+  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const day = d.getDate();
+  if (day <= 10) {
+    return new Date(d.getFullYear(), d.getMonth(), 10);
+  } else if (day <= 25) {
+    return new Date(d.getFullYear(), d.getMonth(), 25);
+  } else {
+    // next month 10th
+    return new Date(d.getFullYear(), d.getMonth() + 1, 10);
+  }
+}
+
+/* Advance to next cutoff date (toggle between 10th and 25th) */
+function advanceToNextCutoff(date){
+  const day = date.getDate();
+  if (day === 10) {
+    // go to 25th same month
+    return new Date(date.getFullYear(), date.getMonth(), 25);
+  } else {
+    // date is 25 => next 10th of next month
+    return new Date(date.getFullYear(), date.getMonth() + 1, 10);
+  }
+}
+
+/* --------------------
+   Core calculation & schedule generation
+   -------------------- */
+function generateSchedule(loanAmount, shareCapital, months){
+  // Validate and compute numbers
+  loanAmount = Number(loanAmount);
+  shareCapital = Number(shareCapital);
+  months = Number(months);
+
+  const SERVICE_FEE = 20;
+  const PAIDUP_RATE = 0.05;
+  const INTEREST_RATE_MONTH = 0.02;
+
+  const paidUp = round(loanAmount * PAIDUP_RATE);
+  const netProceeds = round(loanAmount - paidUp - SERVICE_FEE);
+  const monthlyInterest = round(netProceeds * INTEREST_RATE_MONTH);
+  const totalInterest = round(monthlyInterest * months);
+  const totalPayable = round(loanAmount + totalInterest);
+  const totalTerms = months * 2;
+  const amtPerTerm = round(totalPayable / totalTerms);
+
+  // For interest distribution per term, split monthly interest across two terms
+  const interestPerTerm = round(monthlyInterest / 2);
+
+  // Build schedule rows
+  let rows = [];
+  let firstDate = computeFirstPaymentDate(new Date());
+  let currentDate = new Date(firstDate);
+
+  // Remaining balance tracked as principal remaining (start with loanAmount)
+  let balance = loanAmount;
+  // We'll compute principal portion per term as: principalTerm = amtPerTerm - interestPerTerm
+  // But adjust last term to account for rounding differences
+  let totalPrincipalAccum = 0;
+  let totalInterestAccum = 0;
+  let totalAmountAccum = 0;
+
+  for (let i=1; i<= totalTerms; i++){
+    // For each term:
+    // interest portion is interestPerTerm (but ensure last month's two terms total interest equals totalInterest)
+    // we need to be careful since monthlyInterest * months should equal totalInterest.
+    // Because interestPerTerm is rounded, small rounding differences can occur; fix on last term.
+    let interestThisTerm = interestPerTerm;
+
+    // If this is within the last month, ensure last two terms' interest equals remaining interest.
+    // Simpler approach: for the final term, recompute interestThisTerm = remainingInterest
+    let remainingTermCount = totalTerms - (i-1);
+    let computedInterestAccum = totalInterestAccum;
+    let remainingInterest = round(totalInterest - computedInterestAccum);
+    if (remainingTermCount === 1) {
+      // last term takes the remaining interest
+      interestThisTerm = remainingInterest;
+    } else {
+      // In other terms, keep interestPerTerm but ensure not exceed remainingInterest - (remainingTermCount-1)*interestPerTerm
+      // Keep as interestPerTerm (already rounded)
+    }
+
+    // Principal portion: amount per term - interestThisTerm
+    // For amount per term we use amtPerTerm, but on last term adjust amount to pay off remaining balance + interest
+    let amountThisTerm = amtPerTerm;
+    let principalThisTerm = round(amountThisTerm - interestThisTerm);
+
+    // If it's the last term, set principal to remaining balance
+    if (i === totalTerms) {
+      // Principal should settle remaining balance (rounded)
+      principalThisTerm = round(balance);
+      amountThisTerm = round(principalThisTerm + interestThisTerm);
+    }
+
+    // Subtract principal from balance
+    balance = round(balance - principalThisTerm);
+    if (balance < 0.01) balance = 0.00; // eliminate negative rounding stray
+
+    rows.push({
+      term: i,
+      date: new Date(currentDate),
+      amount: amountThisTerm,
+      principal: principalThisTerm,
+      interest: interestThisTerm,
+      balance: balance
+    });
+
+    totalPrincipalAccum = round(totalPrincipalAccum + principalThisTerm);
+    totalInterestAccum = round(totalInterestAccum + interestThisTerm);
+    totalAmountAccum = round(totalAmountAccum + amountThisTerm);
+
+    // advance to next cutoff date
+    currentDate = advanceToNextCutoff(currentDate);
+  }
+
+  // Final totals (ensure they match computed totals as closely as possible)
+  return {
+    meta: {
+      loanAmount: loanAmount,
+      shareCapital: shareCapital,
+      months: months,
+      paidUp: paidUp,
+      serviceFee: SERVICE_FEE,
+      netProceeds: netProceeds,
+      monthlyInterest: monthlyInterest,
+      totalInterest: totalInterest,
+      totalPayable: totalPayable,
+      totalTerms: totalTerms,
+      amtPerTerm: amtPerTerm
+    },
+    rows: rows,
+    totals: {
+      amount: totalAmountAccum,
+      principal: totalPrincipalAccum,
+      interest: totalInterestAccum
+    }
+  };
+}
+
+/* rounding helper */
+function round(x){ return Math.round((Number(x) + Number.EPSILON) * 100) / 100; }
+
+/* --------------------
+   UI interaction
+   -------------------- */
+function onCalculate(){
+  const shareCapital = Number(document.getElementById('shareCapital').value);
+  const loanAmount = Number(document.getElementById('loanAmount').value);
+  const months = Number(document.getElementById('months').value);
+
+  const loanErrorDiv = document.getElementById('loanError');
+  const summaryDiv = document.getElementById('summary');
+  const summaryText = document.getElementById('summaryText');
+  const scheduleContainer = document.getElementById('scheduleContainer');
+
+  loanErrorDiv.style.display = 'none';
+  summaryDiv.style.display = 'none';
+  scheduleContainer.innerHTML = '';
+
+  // Basic validation
+  if (!shareCapital && shareCapital !== 0){
+    loanErrorDiv.style.display = 'block';
+    loanErrorDiv.innerText = 'Please enter share capital.';
+    return;
+  }
+  if (!loanAmount){
+    loanErrorDiv.style.display = 'block';
+    loanErrorDiv.innerText = 'Please enter loan amount.';
+    return;
+  }
+  if (!months || months < 1 || months > 6){
+    loanErrorDiv.style.display = 'block';
+    loanErrorDiv.innerText = 'Months must be between 1 and 6.';
+    return;
+  }
+
+  // Verify loanable amount
+  const maxLoan = getMaxLoanable(shareCapital);
+  if (loanAmount > maxLoan){
+    loanErrorDiv.style.display = 'block';
+    loanErrorDiv.innerText = `Loan amount exceeds maximum allowable: ₱${fmt(maxLoan)}.`;
+    return;
+  }
+
+  // Generate schedule
+  const sched = generateSchedule(loanAmount, shareCapital, months);
+
+  // Fill summary on screen
+  summaryText.innerHTML = `
+    <strong>Summary</strong><br>
+    Share Capital: ${currency(sched.meta.shareCapital)} &nbsp;|&nbsp;
+    Loan Amount: ${currency(sched.meta.loanAmount)} &nbsp;|&nbsp;
+    Months: ${sched.meta.months} &nbsp;|&nbsp;
+    Total Terms: ${sched.meta.totalTerms}<br>
+    Paid-up (5%): ${currency(sched.meta.paidUp)} &nbsp;|&nbsp;
+    Service Fee: ${currency(sched.meta.serviceFee)} &nbsp;|&nbsp;
+    Net Proceeds: ${currency(sched.meta.netProceeds)}<br>
+    Monthly Interest: ${currency(sched.meta.monthlyInterest)} &nbsp;|&nbsp;
+    Total Interest: ${currency(sched.meta.totalInterest)} &nbsp;|&nbsp;
+    Total Payable: ${currency(sched.meta.totalPayable)} &nbsp;|&nbsp;
+    Per Term (approx): ${currency(sched.meta.amtPerTerm)}
+  `;
+  summaryDiv.style.display = 'block';
+
+  // Build schedule table HTML (matching your format: Payment Date | Amount | Principal | Interest | Balance)
+  let html = `<table><thead><tr>
+    <th>Payment Date</th>
+    <th class="center">Amount</th>
+    <th class="center">Principal</th>
+    <th class="center">Interest</th>
+    <th class="center">Balance</th>
+  </tr></thead><tbody>`;
+
+  sched.rows.forEach(r => {
+    const dt = r.date;
+    // format date as MM/DD/YYYY (or you can change to DD/MM/YYYY if preferred)
+    const dateStr = `${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}/${dt.getFullYear()}`;
+    html += `<tr>
+      <td>${dateStr}</td>
+      <td class="center">${currency(r.amount)}</td>
+      <td class="center">${currency(r.principal)}</td>
+      <td class="center">${currency(r.interest)}</td>
+      <td class="center">${currency(r.balance)}</td>
+    </tr>`;
+  });
+
+  // Totals row
+  html += `</tbody><tfoot>
+    <tr>
+      <td style="font-weight:800;">Total</td>
+      <td class="center">${currency(sched.totals.amount)}</td>
+      <td class="center">${currency(sched.totals.principal)}</td>
+      <td class="center">${currency(sched.totals.interest)}</td>
+      <td></td>
+    </tr>
+  </tfoot></table>`;
+
+  scheduleContainer.innerHTML = html;
+
+  // Keep the print area visible in DOM (it's hidden via CSS normally until print),
+  // but show a visual preview by making .print-area visible on screen as well:
+  document.querySelector('.print-area').style.display = 'block';
+  // Scroll to schedule preview
+  setTimeout(()=>{ document.querySelector('.print-area').scrollIntoView({behavior:'smooth'}); }, 100);
+}
+
+function onPrint(){
+  // Validate that schedule exists; if not, run calculate first
+  const scheduleContainer = document.getElementById('scheduleContainer');
+  if (!scheduleContainer.innerHTML.trim()){
+    // run calculate automatically
+    onCalculate();
+    // slight delay to ensure DOM updated
+    setTimeout(()=>{ window.print(); }, 350);
+  } else {
+    // open print preview
+    window.print();
+  }
+}
+</script>
+</body>
+</html>
